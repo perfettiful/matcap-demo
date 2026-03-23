@@ -5,12 +5,6 @@ export default defineNuxtConfig({
 
   ssr: false,
 
-  $production: {
-    app: {
-      baseURL: '/matcap-demo/',
-    }
-  },
-
   app: {
     head: {
       title: 'Matcap Explorer - Three.js Demo',
