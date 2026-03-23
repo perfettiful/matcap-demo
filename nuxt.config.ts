@@ -3,6 +3,14 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
 
+  ssr: false,
+
+  $production: {
+    app: {
+      baseURL: '/matcap-demo/',
+    }
+  },
+
   app: {
     head: {
       title: 'Matcap Explorer - Three.js Demo',
@@ -14,8 +22,6 @@ export default defineNuxtConfig({
       ]
     }
   },
-
-  ssr: false,
 
   css: ['~/assets/css/main.css'],
 
