@@ -1,7 +1,4 @@
-export type RendererType = 'webgl' | 'webgpu'
-
 export interface SceneSettings {
-  renderer: RendererType
   matcap: string
   geometry: string
   environment: string

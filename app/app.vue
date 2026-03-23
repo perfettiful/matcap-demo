@@ -3,16 +3,16 @@ import {
   Palette, Box, Sun, RotateCw, GitCompare, Video,
   PanelRightClose, PanelRightOpen,
   ZoomIn, ZoomOut, RotateCcw, Eye, Lightbulb,
-  Layers, CircleHelp, Sparkles, Gauge, Monitor,
+  Layers, CircleHelp, Sparkles, Gauge,
 } from 'lucide-vue-next'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
-const { settings, webgpuSupported, activeRenderer, init, dispose, zoomIn, zoomOut, resetView, getCamera, getControls, MATCAPS, GEOMETRIES, ENVIRONMENTS } = useMatcapScene()
+const { settings, init, dispose, zoomIn, zoomOut, resetView, getCamera, getControls, MATCAPS, GEOMETRIES, ENVIRONMENTS } = useMatcapScene()
 const showInfo = ref(false)
 const showControls = ref(true)
 
 const sections = reactive({
-  renderer: true, material: true, geometry: true, environment: true,
+  material: true, geometry: true, environment: true,
   lighting: true, animation: true, comparison: false, camera: true,
 })
 
@@ -60,23 +60,6 @@ const btnCss = { background: '#44444d', border: '1px solid rgba(255,255,255,0.07
         </div>
 
         <div :style="{ flex: 1, overflowY: 'auto', padding: '4px 0' }">
-          <PanelSection title="Renderer" :icon="Monitor" :open="sections.renderer" @toggle="sections.renderer = !sections.renderer">
-            <div :style="{ display: 'flex', gap: '6px' }">
-              <button
-                @click="settings.renderer = 'webgl'"
-                :style="{ flex: 1, background: activeRenderer === 'webgl' ? '#e8a44a' : '#44444d', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px', padding: '8px 0', fontSize: '12px', color: activeRenderer === 'webgl' ? '#1a1a1a' : '#c0c0c8', cursor: 'pointer', textAlign: 'center', fontWeight: activeRenderer === 'webgl' ? '600' : '400' }"
-              >WebGL</button>
-              <button
-                @click="webgpuSupported && (settings.renderer = 'webgpu')"
-                :style="{ flex: 1, background: activeRenderer === 'webgpu' ? '#e8a44a' : '#44444d', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px', padding: '8px 0', fontSize: '12px', color: activeRenderer === 'webgpu' ? '#1a1a1a' : webgpuSupported ? '#c0c0c8' : '#555', cursor: webgpuSupported ? 'pointer' : 'not-allowed', textAlign: 'center', fontWeight: activeRenderer === 'webgpu' ? '600' : '400', opacity: webgpuSupported ? 1 : 0.5 }"
-              >WebGPU</button>
-            </div>
-            <p :style="{ fontSize: '11px', color: '#6b6b75', marginTop: '6px' }">
-              Active: <span :style="{ color: '#e8a44a' }">{{ activeRenderer === 'webgpu' ? 'WebGPU' : 'WebGL' }}</span>
-              <span v-if="!webgpuSupported" :style="{ color: '#8a5a3a' }"> (WebGPU not supported)</span>
-            </p>
-          </PanelSection>
-
           <PanelSection title="Material" :icon="Palette" :open="sections.material" @toggle="sections.material = !sections.material">
             <SelectControl v-model="settings.matcap" label="Matcap" :options="MATCAPS" />
           </PanelSection>

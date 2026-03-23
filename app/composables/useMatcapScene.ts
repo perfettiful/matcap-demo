@@ -1,7 +1,6 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import WebGPURenderer from 'three/src/renderers/webgpu/WebGPURenderer.js'
-import { MATCAPS, ENVIRONMENTS, type SceneSettings, type EnvPreset, type RendererType } from '~/types/scene'
+import { MATCAPS, ENVIRONMENTS, type SceneSettings, type EnvPreset } from '~/types/scene'
 
 // Geometry factories
 const GEOMETRIES: Record<string, () => THREE.BufferGeometry> = {
@@ -108,7 +107,7 @@ function createTextSprite(text: string, color: string = '#e8a44a') {
 export function useMatcapScene() {
   let scene: THREE.Scene
   let camera: THREE.PerspectiveCamera
-  let renderer: THREE.WebGLRenderer | WebGPURenderer
+  let renderer: THREE.WebGLRenderer
   let controls: OrbitControls
 
   let matcapMesh: THREE.Mesh
@@ -131,11 +130,11 @@ export function useMatcapScene() {
   const matcapTextures: Record<string, THREE.Texture> = {}
 
   let canvasEl: HTMLCanvasElement
+  let initialized = false
   const webgpuSupported = ref(false)
-  const activeRenderer = ref<RendererType>('webgl')
+  const activeRenderer = ref('webgl')
 
   const settings = reactive<SceneSettings>({
-    renderer: 'webgl',
     matcap: 'steel',
     geometry: 'Torus Knot',
     environment: 'Studio',
@@ -157,13 +156,15 @@ export function useMatcapScene() {
     camera.position.set(0, 1.8, settings.zoomLevel)
     camera.lookAt(0, 0.6, 0)
 
-    // Detect WebGPU support
     webgpuSupported.value = !!(navigator as any).gpu
-    if (webgpuSupported.value) {
-      settings.renderer = 'webgpu'
-    }
 
-    await createRenderer(canvas, settings.renderer)
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
+    renderer.setSize(window.innerWidth, window.innerHeight)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = 1.2
+    renderer.shadowMap.enabled = true
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap
 
     controls = new OrbitControls(camera, renderer.domElement)
     controls.enableDamping = true
@@ -176,6 +177,8 @@ export function useMatcapScene() {
     createLights()
     await createEnvironmentMap()
     scene.environment = envMap
+
+    initialized = true
     await loadMatcapTexture(settings.matcap)
     createMaterials()
     createPlatform()
@@ -183,71 +186,6 @@ export function useMatcapScene() {
     updateEnvironment()
     animate()
     window.addEventListener('resize', onWindowResize)
-  }
-
-  async function createRenderer(canvas: HTMLCanvasElement, type: RendererType) {
-    if (type === 'webgpu') {
-      try {
-        renderer = new WebGPURenderer({ canvas, antialias: true, alpha: true })
-        await (renderer as WebGPURenderer).init()
-        activeRenderer.value = 'webgpu'
-      } catch (e) {
-        console.warn('WebGPU init failed, falling back to WebGL:', e)
-        renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
-        activeRenderer.value = 'webgl'
-        settings.renderer = 'webgl'
-        webgpuSupported.value = false
-      }
-    } else {
-      renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
-      activeRenderer.value = 'webgl'
-    }
-
-    renderer.setSize(window.innerWidth, window.innerHeight)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.2
-    if ('shadowMap' in renderer) {
-      renderer.shadowMap.enabled = true
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap
-    }
-  }
-
-  async function switchRenderer() {
-    if (animationId) cancelAnimationFrame(animationId)
-    animationId = null
-
-    const oldTarget = controls.target.clone()
-    const oldCamPos = camera.position.clone()
-    controls.dispose()
-    renderer.dispose()
-
-    await createRenderer(canvasEl, settings.renderer)
-
-    controls = new OrbitControls(camera, renderer.domElement)
-    controls.enableDamping = true
-    controls.dampingFactor = 0.05
-    controls.minDistance = 2
-    controls.maxDistance = 15
-    controls.maxPolarAngle = Math.PI * 0.85
-    controls.target.copy(oldTarget)
-    camera.position.copy(oldCamPos)
-
-    // Recreate environment map with new renderer
-    await createEnvironmentMap()
-    scene.environment = settings.showLights ? null : envMap
-    // Re-assign env map to PBR material
-    if (pbrMaterial) {
-      pbrMaterial.envMap = envMap
-      pbrMaterial.needsUpdate = true
-    }
-    if (platform?.material instanceof THREE.MeshStandardMaterial) {
-      platform.material.envMap = envMap
-      platform.material.needsUpdate = true
-    }
-
-    updateEnvironment()
-    animate()
   }
 
   function createLights() {
@@ -464,7 +402,6 @@ export function useMatcapScene() {
   }
 
   // Watchers
-  watch(() => settings.renderer, switchRenderer)
   watch(() => settings.matcap, updateMatcap)
   watch(() => settings.geometry, createMeshes)
   watch(() => settings.environment, updateEnvironment)
