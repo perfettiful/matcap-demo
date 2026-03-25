@@ -49,8 +49,10 @@ const { displayLabel, isFlipping } = useFlipLabel(
         <svg width="34" height="34" viewBox="0 0 28 28" fill="none" :style="{ opacity: model === geo.key ? 1 : 0.5 }">
           <!-- Torus Knot -->
           <template v-if="geo.icon === 'knot'">
-            <path d="M14 4c-3 0-5 2-6 5s0 6 2 8c2 1 5 2 7 0s3-5 2-8c-1-2-3-5-5-5z" :stroke="model === geo.key ? '#e8a44a' : '#888'" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-            <path d="M10 10c1-2 4-3 6-2s3 3 2 5-3 4-5 3-3-2-3-4" :stroke="model === geo.key ? '#e8a44a' : '#888'" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <ellipse cx="11.2" cy="14" rx="4.2" ry="6.3" :stroke="model === geo.key ? '#e8a44a' : '#888'" stroke-width="1.8" fill="none"/>
+            <ellipse cx="16.8" cy="14" rx="4.2" ry="6.3" :stroke="model === geo.key ? '#e8a44a' : '#888'" stroke-width="1.8" fill="none"/>
+            <path d="M11.6 8.8c1.9 1.4 3.3 2.8 4.6 5.2c-1.2 2.3-2.7 3.7-4.6 5.2" :stroke="model === geo.key ? '#e8a44a' : '#888'" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+            <path d="M16.4 8.8c-1.9 1.4-3.3 2.8-4.6 5.2c1.2 2.3 2.7 3.7 4.6 5.2" :stroke="model === geo.key ? '#e8a44a' : '#888'" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.9"/>
           </template>
           <!-- Sphere -->
           <template v-if="geo.icon === 'sphere'">
@@ -88,8 +90,10 @@ const { displayLabel, isFlipping } = useFlipLabel(
           </template>
           <!-- Knob -->
           <template v-if="geo.icon === 'knob'">
-            <path d="M10 22 Q8 22 8 16 Q8 8 14 6 Q20 8 20 16 Q20 22 18 22 Z" :stroke="model === geo.key ? '#e8a44a' : '#888'" stroke-width="1.8" fill="none" stroke-linejoin="round"/>
-            <ellipse cx="14" cy="22" rx="4" ry="1.5" :stroke="model === geo.key ? '#e8a44a' : '#888'" stroke-width="1.2" fill="none"/>
+            <circle cx="14" cy="14" r="7.5" :stroke="model === geo.key ? '#e8a44a' : '#888'" stroke-width="1.8" fill="none"/>
+            <circle cx="14" cy="14" r="4.2" :stroke="model === geo.key ? '#e8a44a' : '#888'" stroke-width="1.2" fill="none" opacity="0.8"/>
+            <path d="M14 14 L18.5 10.5" :stroke="model === geo.key ? '#e8a44a' : '#888'" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="18.5" cy="10.5" r="1.1" :fill="model === geo.key ? '#e8a44a' : '#888'"/>
           </template>
         </svg>
       </button>

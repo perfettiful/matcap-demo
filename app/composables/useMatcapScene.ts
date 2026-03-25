@@ -180,7 +180,9 @@ export function useMatcapScene() {
     controls.dampingFactor = 0.05
     controls.minDistance = 2
     controls.maxDistance = 15
-    controls.maxPolarAngle = Math.PI * 0.85
+    controls.minPolarAngle = 0.12
+    // Keep the camera above the platform so you never orbit underneath the scene.
+    controls.maxPolarAngle = Math.PI * 0.49
     controls.target.copy(DEFAULT_CAMERA_TARGET)
 
     createLights()
@@ -412,6 +414,14 @@ export function useMatcapScene() {
     pbrMesh.visible = false
     scene.add(pbrMesh)
 
+    // Some shapes benefit from a more product-shot-like resting angle.
+    if (settings.geometry === 'Knob') {
+      matcapMesh.rotation.x = 0.56
+      matcapMesh.rotation.z = 0.12
+      pbrMesh.rotation.x = 0.56
+      pbrMesh.rotation.z = 0.12
+    }
+
     updateMeshPositions()
   }
 
@@ -506,7 +516,9 @@ export function useMatcapScene() {
     const endZoom = position.distanceTo(target)
     const startTime = performance.now()
 
-    const ease = (t: number) => 1 - Math.pow(1 - t, 3)
+    const ease = (t: number) => (t < 0.5)
+      ? 4 * t * t * t
+      : 1 - Math.pow(-2 * t + 2, 3) / 2
 
     const step = (now: number) => {
       const raw = Math.min(1, (now - startTime) / duration)
@@ -553,7 +565,7 @@ export function useMatcapScene() {
       bottom: new THREE.Vector3(0, -distance * 0.98, 0.14),
     } as const
 
-    animateCamera(target.clone().add(offsets[view]), target, 480)
+    animateCamera(target.clone().add(offsets[view]), target, 760)
   }
   function getCamera() { return camera }
   function getControls() { return controls }
