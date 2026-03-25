@@ -7,6 +7,7 @@ const props = defineProps<{
   getControls: () => any
   onResetView?: () => void
   onFocusObject?: () => void
+  onSnapView?: (view: 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom') => void
 }>()
 
 const cubeCanvas = ref<HTMLCanvasElement | null>(null)
@@ -15,9 +16,13 @@ let cubeRenderer: THREE.WebGLRenderer
 let cubeScene: THREE.Scene
 let cubeCamera: THREE.PerspectiveCamera
 let cubeMesh: THREE.Group
+let cubeBox: THREE.Mesh
 let animId: number | null = null
 let lastMouse = { x: 0, y: 0 }
 const isHovering = ref(false)
+const raycaster = new THREE.Raycaster()
+const pointer = new THREE.Vector2()
+let dragDistance = 0
 
 function makeTextTexture(text: string, bgColor: string) {
   const canvas = document.createElement('canvas')
@@ -62,8 +67,8 @@ onMounted(() => {
   const colors = ['#a23c3c', '#355f9f', '#4b8a48', '#9a7b36', '#5a5fc0', '#6c4e91']
   const materials = labels.map((text, i) => new THREE.MeshBasicMaterial({ map: makeTextTexture(text, colors[i]) }))
 
-  const box = new THREE.Mesh(new THREE.BoxGeometry(1.02, 1.02, 1.02), materials)
-  cubeMesh.add(box)
+  cubeBox = new THREE.Mesh(new THREE.BoxGeometry(1.02, 1.02, 1.02), materials)
+  cubeMesh.add(cubeBox)
 
   // Axis lines
   const al = 1.0
@@ -85,6 +90,7 @@ onMounted(() => {
   cubeScene.add(new THREE.AmbientLight(0xffffff, 1))
 
   cubeCanvas.value.addEventListener('mousedown', onMouseDown)
+  cubeCanvas.value.addEventListener('click', onCanvasClick)
   cubeCanvas.value.addEventListener('touchstart', onTouchStart, { passive: false })
   window.addEventListener('mousemove', onMouseMove)
   window.addEventListener('mouseup', onMouseUp)
@@ -97,12 +103,14 @@ onMounted(() => {
 function onMouseDown(e: MouseEvent) {
   e.preventDefault()
   isDragging.value = true
+  dragDistance = 0
   lastMouse = { x: e.clientX, y: e.clientY }
 }
 
 function onTouchStart(e: TouchEvent) {
   e.preventDefault()
   isDragging.value = true
+  dragDistance = 0
   lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY }
 }
 
@@ -110,6 +118,7 @@ function applyDrag(clientX: number, clientY: number) {
   if (!isDragging.value) return
   const dx = clientX - lastMouse.x
   const dy = clientY - lastMouse.y
+  dragDistance += Math.hypot(dx, dy)
   lastMouse = { x: clientX, y: clientY }
 
   try {
@@ -133,6 +142,24 @@ function onMouseMove(e: MouseEvent) { applyDrag(e.clientX, e.clientY) }
 function onTouchMove(e: TouchEvent) { e.preventDefault(); applyDrag(e.touches[0].clientX, e.touches[0].clientY) }
 function onMouseUp() { isDragging.value = false }
 function onTouchEnd() { isDragging.value = false }
+
+function onCanvasClick(e: MouseEvent) {
+  if (dragDistance > 4 || !cubeCanvas.value) return
+
+  const rect = cubeCanvas.value.getBoundingClientRect()
+  pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1
+  pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1
+  raycaster.setFromCamera(pointer, cubeCamera)
+
+  const hit = raycaster.intersectObject(cubeBox)[0]
+  if (!hit || hit.faceIndex === undefined) return
+
+  const faceIndex = Math.floor(hit.faceIndex / 2)
+  const views: Array<'right' | 'left' | 'top' | 'bottom' | 'front' | 'back'> = [
+    'right', 'left', 'top', 'bottom', 'front', 'back',
+  ]
+  props.onSnapView?.(views[faceIndex] ?? 'front')
+}
 
 function resetView() {
   props.onResetView?.()
@@ -160,6 +187,7 @@ onUnmounted(() => {
   window.removeEventListener('mouseup', onMouseUp)
   window.removeEventListener('touchmove', onTouchMove)
   window.removeEventListener('touchend', onTouchEnd)
+  cubeCanvas.value?.removeEventListener('click', onCanvasClick)
 })
 </script>
 

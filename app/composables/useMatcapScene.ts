@@ -540,6 +540,21 @@ export function useMatcapScene() {
   function focusObject() {
     animateCamera(new THREE.Vector3(0, 1.25, 3.6), new THREE.Vector3(0, 0.6, 0), 520)
   }
+  function snapToView(view: 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom') {
+    const target = controls.target.clone()
+    const distance = camera.position.distanceTo(target)
+
+    const offsets = {
+      front: new THREE.Vector3(0, 0, distance),
+      back: new THREE.Vector3(0, 0, -distance),
+      left: new THREE.Vector3(-distance, 0, 0),
+      right: new THREE.Vector3(distance, 0, 0),
+      top: new THREE.Vector3(0, distance * 0.98, 0.14),
+      bottom: new THREE.Vector3(0, -distance * 0.98, 0.14),
+    } as const
+
+    animateCamera(target.clone().add(offsets[view]), target, 480)
+  }
   function getCamera() { return camera }
   function getControls() { return controls }
 
@@ -592,5 +607,5 @@ export function useMatcapScene() {
   watch(() => settings.pbrMetalness, updatePBRMaterial)
   watch(() => settings.pbrRoughness, updatePBRMaterial)
 
-  return { settings, init, dispose, zoomIn, zoomOut, resetView, focusObject, getCamera, getControls, MATCAPS, GEOMETRIES, ENVIRONMENTS }
+  return { settings, init, dispose, zoomIn, zoomOut, resetView, focusObject, snapToView, getCamera, getControls, MATCAPS, GEOMETRIES, ENVIRONMENTS }
 }

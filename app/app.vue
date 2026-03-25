@@ -7,13 +7,15 @@ import {
 } from 'lucide-vue-next'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
-const { settings, init, dispose, zoomIn, zoomOut, resetView, focusObject, getCamera, getControls, MATCAPS, GEOMETRIES, ENVIRONMENTS } = useMatcapScene()
+const { settings, init, dispose, zoomIn, zoomOut, resetView, focusObject, snapToView, getCamera, getControls, MATCAPS, GEOMETRIES, ENVIRONMENTS } = useMatcapScene()
 const showInfo = ref(false)
 const showControls = ref(false)
 const showLightTooltip = ref(false)
 const showGithubTooltip = ref(false)
+const showInteractionHint = ref(true)
 let tooltipTimeout: ReturnType<typeof setTimeout> | null = null
 let panelRevealTimer: ReturnType<typeof setTimeout> | null = null
+let hintTimer: ReturnType<typeof setTimeout> | null = null
 
 const sections = reactive({
   material: true, geometry: true, environment: true,
@@ -45,6 +47,44 @@ const canvasCursor = computed(() => {
 
 function onCanvasDown() { isDragging.value = true }
 function onCanvasUp() { isDragging.value = false }
+function dismissInteractionHint() {
+  showInteractionHint.value = false
+  if (hintTimer) {
+    clearTimeout(hintTimer)
+    hintTimer = null
+  }
+}
+
+function onCanvasPointerDown() {
+  onCanvasDown()
+  dismissInteractionHint()
+}
+
+function onCanvasWheel(event: WheelEvent) {
+  dismissInteractionHint()
+  zoomCursor.value = event.deltaY > 0 ? 'zoom-out' : 'zoom-in'
+  isZooming.value = true
+  if (zoomTimer) clearTimeout(zoomTimer)
+  zoomTimer = setTimeout(() => { isZooming.value = false }, 300)
+}
+
+function onWindowKeydown(event: KeyboardEvent) {
+  const target = event.target as HTMLElement | null
+  if (event.metaKey || event.ctrlKey || event.altKey) return
+  if (target && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) return
+
+  const key = event.key.toLowerCase()
+  if (!['r', 'f', 'l', 'c', 'p'].includes(key)) return
+
+  dismissInteractionHint()
+  event.preventDefault()
+
+  if (key === 'r') resetView()
+  else if (key === 'f') focusObject()
+  else if (key === 'l') toggleLights()
+  else if (key === 'c') settings.comparisonMode = !settings.comparisonMode
+  else if (key === 'p') showControls.value = !showControls.value
+}
 
 onMounted(() => {
   if (canvasRef.value) init(canvasRef.value)
@@ -54,18 +94,22 @@ onMounted(() => {
     showControls.value = true
   }, 1400)
 
+  hintTimer = setTimeout(() => {
+    showInteractionHint.value = false
+    hintTimer = null
+  }, 5200)
+
   // Detect scroll-zoom on canvas
-  canvasRef.value?.addEventListener('wheel', (event) => {
-    zoomCursor.value = event.deltaY > 0 ? 'zoom-out' : 'zoom-in'
-    isZooming.value = true
-    if (zoomTimer) clearTimeout(zoomTimer)
-    zoomTimer = setTimeout(() => { isZooming.value = false }, 300)
-  }, { passive: true })
+  canvasRef.value?.addEventListener('wheel', onCanvasWheel, { passive: true })
+  window.addEventListener('keydown', onWindowKeydown)
 })
 onUnmounted(() => {
   if (tooltipTimeout) clearTimeout(tooltipTimeout)
   if (zoomTimer) clearTimeout(zoomTimer)
   if (panelRevealTimer) clearTimeout(panelRevealTimer)
+  if (hintTimer) clearTimeout(hintTimer)
+  canvasRef.value?.removeEventListener('wheel', onCanvasWheel)
+  window.removeEventListener('keydown', onWindowKeydown)
   dispose()
 })
 
@@ -82,12 +126,44 @@ const btnCss = { background: '#44444d', border: '1px solid rgba(255,255,255,0.07
       ref="canvasRef"
       class="block w-full h-full"
       :style="{ cursor: canvasCursor }"
-      @mousedown="onCanvasDown"
+      @mousedown="onCanvasPointerDown"
       @mouseup="onCanvasUp"
       @mouseleave="onCanvasUp"
     />
 
-    <ViewCube :get-camera="getCamera" :get-controls="getControls" :on-reset-view="resetView" :on-focus-object="focusObject" />
+    <ViewCube :get-camera="getCamera" :get-controls="getControls" :on-reset-view="resetView" :on-focus-object="focusObject" :on-snap-view="snapToView" />
+
+    <Transition
+      enter-active-class="transition-all duration-300 ease-out"
+      enter-from-class="opacity-0 translate-y-1"
+      enter-to-class="opacity-100 translate-y-0"
+      leave-active-class="transition-all duration-250 ease-in"
+      leave-from-class="opacity-100 translate-y-0"
+      leave-to-class="opacity-0 -translate-y-1"
+    >
+      <div
+        v-if="showInteractionHint"
+        :style="{
+          position: 'fixed',
+          top: '18px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 34,
+          padding: '8px 12px',
+          borderRadius: '999px',
+          background: 'rgba(24, 24, 30, 0.72)',
+          backdropFilter: panelBlur,
+          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: '0 8px 20px rgba(0,0,0,0.22)',
+          color: '#b7b7c2',
+          fontSize: '11px',
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+        }"
+      >
+        Drag to orbit · Scroll to zoom · `R` reset · `F` focus · `L` lights
+      </div>
+    </Transition>
 
     <!-- Toggle button -->
     <button
