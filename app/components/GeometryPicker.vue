@@ -14,17 +14,11 @@ const geometries = [
   { key: 'Knob', label: 'Knob', icon: 'knob' },
 ]
 
-const displayLabel = ref(geometries.find(g => g.key === model.value)?.label ?? 'Torus Knot')
-const isFlipping = ref(false)
-
-watch(model, (newVal) => {
-  if (!newVal) return
-  isFlipping.value = true
-  setTimeout(() => {
-    displayLabel.value = geometries.find(g => g.key === newVal)?.label ?? newVal
-  }, 120)
-  setTimeout(() => { isFlipping.value = false }, 250)
-})
+const { displayLabel, isFlipping } = useFlipLabel(
+  model,
+  value => geometries.find(g => g.key === value)?.label ?? value,
+  geometries.find(g => g.key === model.value)?.label ?? 'Torus Knot',
+)
 </script>
 
 <template>

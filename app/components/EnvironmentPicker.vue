@@ -6,15 +6,11 @@ const props = defineProps<{
   isLightsOn?: boolean
 }>()
 
-const displayLabel = ref(model.value ?? 'Studio')
-const isFlipping = ref(false)
-
-watch(model, (newVal) => {
-  if (!newVal) return
-  isFlipping.value = true
-  setTimeout(() => { displayLabel.value = newVal }, 120)
-  setTimeout(() => { isFlipping.value = false }, 250)
-})
+const { displayLabel, isFlipping } = useFlipLabel(
+  model,
+  value => value,
+  model.value ?? 'Studio',
+)
 
 function tileBackground(env: EnvPreset): string {
   if (env.type === 'solid') {

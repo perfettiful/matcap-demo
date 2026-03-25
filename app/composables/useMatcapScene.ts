@@ -146,11 +146,6 @@ export function useMatcapScene() {
   const matcapTextures: Record<string, THREE.Texture> = {}
   const baseURL = useRuntimeConfig().app.baseURL
 
-  let canvasEl: HTMLCanvasElement
-  let initialized = false
-  const webgpuSupported = ref(false)
-  const activeRenderer = ref('webgl')
-
   const settings = reactive<SceneSettings>({
     matcap: 'steel',
     geometry: 'Torus Knot',
@@ -166,14 +161,11 @@ export function useMatcapScene() {
   })
 
   async function init(canvas: HTMLCanvasElement) {
-    canvasEl = canvas
     scene = new THREE.Scene()
 
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100)
     camera.position.copy(DEFAULT_CAMERA_POSITION)
     camera.lookAt(DEFAULT_CAMERA_TARGET)
-
-    webgpuSupported.value = !!(navigator as any).gpu
 
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
     renderer.setSize(window.innerWidth, window.innerHeight)
@@ -195,7 +187,6 @@ export function useMatcapScene() {
     await createEnvironmentMap()
     scene.environment = envMap
 
-    initialized = true
     await loadMatcapTexture(settings.matcap)
     createMaterials()
     createPlatform()
@@ -601,5 +592,5 @@ export function useMatcapScene() {
   watch(() => settings.pbrMetalness, updatePBRMaterial)
   watch(() => settings.pbrRoughness, updatePBRMaterial)
 
-  return { settings, webgpuSupported, activeRenderer, init, dispose, zoomIn, zoomOut, resetView, focusObject, getCamera, getControls, MATCAPS, GEOMETRIES, ENVIRONMENTS }
+  return { settings, init, dispose, zoomIn, zoomOut, resetView, focusObject, getCamera, getControls, MATCAPS, GEOMETRIES, ENVIRONMENTS }
 }

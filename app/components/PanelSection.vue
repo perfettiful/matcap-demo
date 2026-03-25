@@ -9,8 +9,6 @@ defineProps<{
 
 const emit = defineEmits<{ toggle: [] }>()
 
-const contentRef = ref<HTMLDivElement | null>(null)
-
 function onBeforeEnter(el: Element) {
   const htmlEl = el as HTMLElement
   htmlEl.style.height = '0'
@@ -74,7 +72,7 @@ function onLeave(el: Element, done: () => void) {
       @leave="onLeave"
       :css="false"
     >
-      <div v-if="open" ref="contentRef" style="overflow: hidden;">
+      <div v-if="open" style="overflow: hidden;">
         <div :style="{ padding: '2px 18px 14px' }">
           <slot />
         </div>

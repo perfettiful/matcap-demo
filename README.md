@@ -50,17 +50,17 @@ vec3 color = texture2D(matcapTexture, uv).rgb;
 ## Features
 
 ### Materials
-- **20 Matcap Textures** organized by category:
-  - Metals: chrome, steel, darkMetal, lightMetal, gold, copper, brass, rosegold
-  - Minerals: pearl, obsidian, jade
-  - Organic: skin, clay
-  - Colors: redGlossy, orange, green, greenTeal, cyan, blue, purple
+- **14 curated matcaps** with visual swatch picker
+- Metallic presets and dark/light finishes for quick comparison
+- Live label feedback and side-by-side PBR comparison
 
 ### Geometry
-- 10 shapes: Torus Knot, Sphere, Torus, Icosahedron, Dodecahedron, Octahedron, Capsule, Cylinder, Cone, Teapot
+- 8 shapes: Torus Knot, Sphere, Torus, Rounded Cube, Capsule, Cylinder, Handle, Knob
 
 ### Environment
 - 6 background presets with coordinated platform colors
+- Reactive `Sky` preset with day/night behavior tied to the light toggle
+- Visual environment picker with thumbnail previews
 - Toggle platform visibility
 
 ### Lighting Demo
@@ -78,7 +78,8 @@ vec3 color = texture2D(matcapTexture, uv).rgb;
 - Scroll to zoom
 - Right-drag to pan
 - Zoom In/Out buttons
-- Reset View button
+- Reset View / Focus controls in the `ViewCube`
+- Orientation `ViewCube` / gizmo for quick camera context
 
 ## Tech Stack
 
@@ -122,20 +123,24 @@ open http://localhost:3000
 
 ## Project Structure
 
-```
+```text
 matcap-demo/
 ├── app/
-│   └── app.vue              # Main UI component
-├── composables/
-│   └── useMatcapScene.ts    # Three.js scene logic
-├── assets/
-│   └── css/main.css         # Tailwind config + custom styles
+│   ├── app.vue
+│   ├── assets/css/main.css
+│   ├── composables/
+│   │   ├── useFlipLabel.ts
+│   │   └── useMatcapScene.ts
+│   ├── components/
+│   │   ├── ViewCube.vue
+│   │   ├── MatcapPicker.vue
+│   │   ├── GeometryPicker.vue
+│   │   ├── EnvironmentPicker.vue
+│   │   └── ...
+│   └── types/scene.ts
 ├── public/
 │   ├── favicon.svg
-│   └── matcaps/             # 20 PNG textures (1024x1024)
-│       ├── chrome.png
-│       ├── gold.png
-│       └── ...
+│   └── matcaps/
 ├── nuxt.config.ts
 └── package.json
 ```
@@ -149,34 +154,15 @@ matcap-demo/
 | Right-drag | Pan camera |
 | Zoom In button | Step zoom in |
 | Zoom Out button | Step zoom out |
-| Reset View | Return to default camera position |
+| Home button | Smoothly return to default camera position |
+| Focus button | Frame the object more tightly |
+| ViewCube drag | Orbit the camera from the orientation gizmo |
 
 ## Matcap Textures
 
-All textures are 1024x1024 PNG files sourced from [nidorx/matcaps](https://github.com/nidorx/matcaps).
+Textures are sourced from [nidorx/matcaps](https://github.com/nidorx/matcaps) and trimmed down to the curated set used in the demo:
 
-| Texture | Description |
-|---------|-------------|
-| chrome | Bright chrome/mirror finish |
-| steel | Brushed steel |
-| darkMetal | Dark gunmetal |
-| lightMetal | Light silver |
-| gold | Yellow gold |
-| copper | Warm copper |
-| brass | Antique brass |
-| rosegold | Pink gold |
-| pearl | Iridescent pearl |
-| obsidian | Dark glass |
-| jade | Green jade stone |
-| skin | Flesh tone (subsurface look) |
-| clay | Matte clay/ceramic |
-| redGlossy | Glossy red |
-| orange | Warm orange |
-| green | Fresh green |
-| greenTeal | Blue-green |
-| cyan | Bright cyan |
-| blue | Cool blue |
-| purple | Deep purple |
+`chrome`, `brushedNickel`, `nickel`, `steel`, `brass`, `satinGold`, `gold`, `roseGold`, `copper`, `darkBronze`, `bronze`, `gunmetal`, `matteBlack`, `matteWhite`
 
 ## Creating Your Own Matcaps
 

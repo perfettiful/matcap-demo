@@ -3,21 +3,11 @@ import { MATCAPS, MATCAP_LABELS } from '~/types/scene'
 import { Check } from 'lucide-vue-next'
 
 const model = defineModel<string>()
-const displayLabel = ref(MATCAP_LABELS[model.value ?? 'steel'])
-const isFlipping = ref(false)
-
-watch(model, (newVal) => {
-  if (!newVal) return
-  isFlipping.value = true
-  // Halfway through the flip, swap the text
-  setTimeout(() => {
-    displayLabel.value = MATCAP_LABELS[newVal]
-  }, 120)
-  // Reset flip state after animation completes
-  setTimeout(() => {
-    isFlipping.value = false
-  }, 250)
-})
+const { displayLabel, isFlipping } = useFlipLabel(
+  model,
+  value => MATCAP_LABELS[value] ?? value,
+  MATCAP_LABELS[model.value ?? 'steel'] ?? 'Steel',
+)
 
 /** Convert a hex number (0xRRGGBB) to a CSS hex string */
 function hexColor(n: number): string {
