@@ -1,23 +1,73 @@
 <script setup lang="ts">
 import {
-  Palette, Box, Sun, RotateCw, GitCompare, Video,
+  Palette, Box, Sun, Moon, RotateCw, GitCompare, Video,
   PanelRightClose, PanelRightOpen,
-  ZoomIn, ZoomOut, RotateCcw, Eye, Lightbulb,
-  Layers, CircleHelp, Sparkles, Gauge,
+  ZoomIn, Minus, RotateCcw, Eye, Lightbulb,
+  Layers, CircleHelp, Sparkles, Gauge, Github,
 } from 'lucide-vue-next'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
-const { settings, init, dispose, zoomIn, zoomOut, resetView, getCamera, getControls, MATCAPS, GEOMETRIES, ENVIRONMENTS } = useMatcapScene()
+const { settings, init, dispose, zoomIn, zoomOut, resetView, focusObject, getCamera, getControls, MATCAPS, GEOMETRIES, ENVIRONMENTS } = useMatcapScene()
 const showInfo = ref(false)
-const showControls = ref(true)
+const showControls = ref(false)
+const showLightTooltip = ref(false)
+const showGithubTooltip = ref(false)
+let tooltipTimeout: ReturnType<typeof setTimeout> | null = null
+let panelRevealTimer: ReturnType<typeof setTimeout> | null = null
 
 const sections = reactive({
   material: true, geometry: true, environment: true,
-  lighting: true, animation: true, comparison: false, camera: true,
+  lighting: true, animation: true, comparison: true, camera: true,
 })
 
-onMounted(() => { if (canvasRef.value) init(canvasRef.value) })
-onUnmounted(() => dispose())
+function toggleLights() {
+  settings.showLights = !settings.showLights
+  showLightTooltip.value = true
+  if (tooltipTimeout) clearTimeout(tooltipTimeout)
+  tooltipTimeout = setTimeout(() => { showLightTooltip.value = false }, 2000)
+}
+
+const lightTooltipText = computed(() =>
+  settings.showLights ?  'Lights out!' : 'Let there be Light!'
+)
+
+// Canvas cursor states
+const isDragging = ref(false)
+const isZooming = ref(false)
+const zoomCursor = ref<'zoom-in' | 'zoom-out'>('zoom-in')
+let zoomTimer: ReturnType<typeof setTimeout> | null = null
+
+const canvasCursor = computed(() => {
+  if (isDragging.value) return 'grabbing'
+  if (isZooming.value) return zoomCursor.value
+  return 'grab'
+})
+
+function onCanvasDown() { isDragging.value = true }
+function onCanvasUp() { isDragging.value = false }
+
+onMounted(() => {
+  if (canvasRef.value) init(canvasRef.value)
+
+  // Start focused on the scene, then reveal controls once the user has oriented.
+  panelRevealTimer = setTimeout(() => {
+    showControls.value = true
+  }, 1400)
+
+  // Detect scroll-zoom on canvas
+  canvasRef.value?.addEventListener('wheel', (event) => {
+    zoomCursor.value = event.deltaY > 0 ? 'zoom-out' : 'zoom-in'
+    isZooming.value = true
+    if (zoomTimer) clearTimeout(zoomTimer)
+    zoomTimer = setTimeout(() => { isZooming.value = false }, 300)
+  }, { passive: true })
+})
+onUnmounted(() => {
+  if (tooltipTimeout) clearTimeout(tooltipTimeout)
+  if (zoomTimer) clearTimeout(zoomTimer)
+  if (panelRevealTimer) clearTimeout(panelRevealTimer)
+  dispose()
+})
 
 const panelBg = 'rgba(50, 50, 56, 0.94)'
 const panelBlur = 'blur(24px)'
@@ -28,9 +78,16 @@ const btnCss = { background: '#44444d', border: '1px solid rgba(255,255,255,0.07
 
 <template>
   <div class="relative w-screen h-screen overflow-hidden" style="background: #2e2e34">
-    <canvas ref="canvasRef" class="block w-full h-full" />
+    <canvas
+      ref="canvasRef"
+      class="block w-full h-full"
+      :style="{ cursor: canvasCursor }"
+      @mousedown="onCanvasDown"
+      @mouseup="onCanvasUp"
+      @mouseleave="onCanvasUp"
+    />
 
-    <ViewCube :get-camera="getCamera" :get-controls="getControls" />
+    <ViewCube :get-camera="getCamera" :get-controls="getControls" :on-reset-view="resetView" :on-focus-object="focusObject" />
 
     <!-- Toggle button -->
     <button
@@ -61,16 +118,18 @@ const btnCss = { background: '#44444d', border: '1px solid rgba(255,255,255,0.07
 
         <div :style="{ flex: 1, overflowY: 'auto', padding: '4px 0' }">
           <PanelSection title="Material" :icon="Palette" :open="sections.material" @toggle="sections.material = !sections.material">
-            <SelectControl v-model="settings.matcap" label="Matcap" :options="MATCAPS" />
+            <MatcapPicker v-model="settings.matcap" />
           </PanelSection>
 
           <PanelSection title="Geometry" :icon="Box" :open="sections.geometry" @toggle="sections.geometry = !sections.geometry">
-            <SelectControl v-model="settings.geometry" label="Shape" :options="GEOMETRIES" />
+            <GeometryPicker v-model="settings.geometry" />
           </PanelSection>
 
           <PanelSection title="Environment" :icon="Layers" :open="sections.environment" @toggle="sections.environment = !sections.environment">
-            <SelectControl v-model="settings.environment" label="Background" :options="ENVIRONMENTS" />
-            <ToggleRow v-model="settings.showPlatform" label="Show Platform" :icon="Eye" />
+            <EnvironmentPicker v-model="settings.environment" :is-lights-on="settings.showLights" />
+            <div :style="{ marginTop: '8px' }">
+              <ToggleRow v-model="settings.showPlatform" label="Show Platform" :icon="Eye" />
+            </div>
           </PanelSection>
 
           <PanelSection title="Lighting" :icon="Lightbulb" :open="sections.lighting" @toggle="sections.lighting = !sections.lighting">
@@ -93,7 +152,7 @@ const btnCss = { background: '#44444d', border: '1px solid rgba(255,255,255,0.07
           <PanelSection title="Camera" :icon="Video" :open="sections.camera" @toggle="sections.camera = !sections.camera">
             <div :style="{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }">
               <button @click="zoomIn" :style="btnCss"><ZoomIn :size="13" /> In</button>
-              <button @click="zoomOut" :style="btnCss"><ZoomOut :size="13" /> Out</button>
+              <button @click="zoomOut" :style="btnCss"><Minus :size="13" /> Out</button>
             </div>
             <button @click="resetView" :style="{ ...btnCss, marginTop: '6px' }"><RotateCcw :size="13" /> Reset View</button>
           </PanelSection>
@@ -108,6 +167,160 @@ const btnCss = { background: '#44444d', border: '1px solid rgba(255,255,255,0.07
     >
       <CircleHelp :size="16" />
     </button>
+
+    <!-- Bottom center controls -->
+    <div class="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1.5 rounded-full px-1.5 py-1"
+      :style="{ background: 'rgba(30, 30, 36, 0.75)', backdropFilter: panelBlur, border: '1px solid rgba(255,255,255,0.08)' }"
+    >
+      <!-- Sun/Moon Light Toggle -->
+      <div class="relative"
+        @mouseenter="showLightTooltip = true"
+        @mouseleave="showLightTooltip = false"
+      >
+        <button
+          @click="toggleLights"
+          class="relative flex items-center justify-center w-7 h-7 rounded-full cursor-pointer transition-all duration-300"
+          :style="{
+            background: settings.showLights
+              ? 'linear-gradient(135deg, #fbbf24, #f59e0b)'
+              : 'linear-gradient(135deg, #334155, #1e293b)',
+            boxShadow: settings.showLights
+              ? '0 0 10px rgba(251, 191, 36, 0.35)'
+              : 'none',
+          }"
+        >
+          <Transition
+            enter-active-class="transition-all duration-400 ease-out"
+            enter-from-class="opacity-0 rotate-[-90deg] scale-50"
+            enter-to-class="opacity-100 rotate-0 scale-100"
+            leave-active-class="transition-all duration-300 ease-in"
+            leave-from-class="opacity-100 rotate-0 scale-100"
+            leave-to-class="opacity-0 rotate-90 scale-50"
+          >
+            <Sun v-if="settings.showLights" :size="13" class="absolute text-white" />
+          </Transition>
+          <Transition
+            enter-active-class="transition-all duration-400 ease-out"
+            enter-from-class="opacity-0 rotate-90 scale-50"
+            enter-to-class="opacity-100 rotate-0 scale-100"
+            leave-active-class="transition-all duration-300 ease-in"
+            leave-from-class="opacity-100 rotate-0 scale-100"
+            leave-to-class="opacity-0 rotate-[-90deg] scale-50"
+          >
+            <Moon v-if="!settings.showLights" :size="13" class="absolute text-slate-400" />
+          </Transition>
+        </button>
+
+        <!-- Light tooltip -->
+        <Transition
+          enter-active-class="transition-all duration-150 ease-out"
+          enter-from-class="opacity-0 translate-y-1"
+          enter-to-class="opacity-100 translate-y-0"
+          leave-active-class="transition-all duration-100 ease-in"
+          leave-from-class="opacity-100 translate-y-0"
+          leave-to-class="opacity-0 translate-y-1"
+        >
+          <div
+            v-if="showLightTooltip"
+            :style="{
+              position: 'absolute',
+              bottom: 'calc(100% + 12px)',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              fontSize: '11px',
+              fontWeight: 500,
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+              background: 'rgba(20, 20, 26, 0.95)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: '#b0b0bc',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+            }"
+          >
+            {{ lightTooltipText }}
+            <!-- arrow with matching border -->
+            <div :style="{
+              position: 'absolute',
+              bottom: '-5px',
+              left: '50%',
+              transform: 'translateX(-50%) rotate(45deg)',
+              width: '8px',
+              height: '8px',
+              background: 'rgba(20, 20, 26, 0.95)',
+              borderRight: '1px solid rgba(255,255,255,0.1)',
+              borderBottom: '1px solid rgba(255,255,255,0.1)',
+            }" />
+          </div>
+        </Transition>
+      </div>
+
+      <!-- Divider -->
+      <div class="w-px h-4" style="background: rgba(255,255,255,0.1)" />
+
+      <!-- GitHub link -->
+      <div class="relative"
+        @mouseenter="showGithubTooltip = true"
+        @mouseleave="showGithubTooltip = false"
+      >
+        <a
+          href="https://github.com/perfettiful/matcap-demo"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex items-center justify-center w-7 h-7 rounded-full transition-colors duration-200"
+          style="color: #6b6b78"
+          @mouseenter="($event.currentTarget as HTMLElement).style.color = '#b0b0bc'"
+          @mouseleave="($event.currentTarget as HTMLElement).style.color = '#6b6b78'"
+        >
+          <Github :size="13" />
+        </a>
+
+        <!-- GitHub tooltip -->
+        <Transition
+          enter-active-class="transition-all duration-150 ease-out"
+          enter-from-class="opacity-0 translate-y-1"
+          enter-to-class="opacity-100 translate-y-0"
+          leave-active-class="transition-all duration-100 ease-in"
+          leave-from-class="opacity-100 translate-y-0"
+          leave-to-class="opacity-0 translate-y-1"
+        >
+          <div
+            v-if="showGithubTooltip"
+            :style="{
+              position: 'absolute',
+              bottom: 'calc(100% + 12px)',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              fontSize: '11px',
+              fontWeight: 500,
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+              background: 'rgba(20, 20, 26, 0.95)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: '#b0b0bc',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+            }"
+          >
+            View Source
+            <!-- arrow with matching border -->
+            <div :style="{
+              position: 'absolute',
+              bottom: '-5px',
+              left: '50%',
+              transform: 'translateX(-50%) rotate(45deg)',
+              width: '8px',
+              height: '8px',
+              background: 'rgba(20, 20, 26, 0.95)',
+              borderRight: '1px solid rgba(255,255,255,0.1)',
+              borderBottom: '1px solid rgba(255,255,255,0.1)',
+            }" />
+          </div>
+        </Transition>
+      </div>
+    </div>
 
     <InfoPanel :show="showInfo" @close="showInfo = false" />
   </div>

@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { MATCAPS, ENVIRONMENTS, type SceneSettings, type EnvPreset } from '~/types/scene'
+import { MATCAPS, ENVIRONMENTS, type SceneSettings, type EnvPreset, type MatcapEntry } from '~/types/scene'
 
 // Geometry factories
 const GEOMETRIES: Record<string, () => THREE.BufferGeometry> = {
@@ -9,7 +9,7 @@ const GEOMETRIES: Record<string, () => THREE.BufferGeometry> = {
   'Torus': () => new THREE.TorusGeometry(0.7, 0.3, 32, 100),
   'Rounded Cube': () => createRoundedBox(1.2, 1.2, 1.2, 10),
   'Capsule': () => new THREE.CapsuleGeometry(0.55, 0.9, 16, 32),
-  'Cylinder': () => new THREE.CylinderGeometry(0.65, 0.65, 1.4, 64, 1, false),
+  'Cylinder': () => new THREE.CylinderGeometry(0.65, 0.65, 3, 64, 1, false),
   'Handle': () => createHandleGeometry(),
   'Knob': () => createKnobGeometry(),
 }
@@ -80,31 +80,45 @@ function mergeBufferGeometries(geos: THREE.BufferGeometry[]) {
   return merged
 }
 
-// --- Text sprite for platform labels ---
+// --- Platform label (flat decal on surface) ---
 
-function createTextSprite(text: string, color: string = '#e8a44a') {
+function createPlatformLabel(text: string): THREE.Mesh {
   const canvas = document.createElement('canvas')
-  canvas.width = 256
-  canvas.height = 64
+  canvas.width = 640
+  canvas.height = 88
   const ctx = canvas.getContext('2d')!
-  ctx.clearRect(0, 0, 256, 64)
-  ctx.fillStyle = color
-  ctx.font = 'bold 36px sans-serif'
+  ctx.clearRect(0, 0, 640, 88)
+
+  // Bold highlight-yellow lettering
+  ctx.fillStyle = 'rgba(232, 164, 74, 0.75)'
+  ctx.font = '700 48px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText(text, 128, 32)
+  ctx.letterSpacing = '6px'
+  ctx.fillText(text, 320, 44)
 
   const tex = new THREE.CanvasTexture(canvas)
   tex.colorSpace = THREE.SRGBColorSpace
-  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false })
-  const sprite = new THREE.Sprite(mat)
-  sprite.scale.set(1.2, 0.3, 1)
-  return sprite
+
+  const geo = new THREE.PlaneGeometry(1.45, 0.26)
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  })
+  const mesh = new THREE.Mesh(geo, mat)
+  // Lay flat on the platform, face up
+  mesh.rotation.x = -Math.PI / 2
+  return mesh
 }
 
 // --- Main composable ---
 
 export function useMatcapScene() {
+  const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, 2.35, 6.2)
+  const DEFAULT_CAMERA_TARGET = new THREE.Vector3(0, 0.6, 0)
+
   let scene: THREE.Scene
   let camera: THREE.PerspectiveCamera
   let renderer: THREE.WebGLRenderer
@@ -120,11 +134,13 @@ export function useMatcapScene() {
   let pointLight: THREE.PointLight
   let ambientLight: THREE.AmbientLight
 
-  let matcapLabel: THREE.Sprite | null = null
-  let pbrLabel: THREE.Sprite | null = null
+  let matcapLabel: THREE.Mesh | null = null
+  let pbrLabel: THREE.Mesh | null = null
 
   let envMap: THREE.Texture | null = null
+  let backgroundTexture: THREE.Texture | null = null
   let animationId: number | null = null
+  let cameraTweenId: number | null = null
 
   const textureLoader = new THREE.TextureLoader()
   const matcapTextures: Record<string, THREE.Texture> = {}
@@ -140,13 +156,13 @@ export function useMatcapScene() {
     geometry: 'Torus Knot',
     environment: 'Studio',
     showPlatform: true,
-    showLights: false,
+    showLights: true,
     autoRotate: true,
-    rotationSpeed: 0.5,
-    comparisonMode: false,
+    rotationSpeed: 0.2,
+    comparisonMode: true,
     pbrMetalness: 0.85,
     pbrRoughness: 0.25,
-    zoomLevel: 5,
+    zoomLevel: DEFAULT_CAMERA_POSITION.distanceTo(DEFAULT_CAMERA_TARGET),
   })
 
   async function init(canvas: HTMLCanvasElement) {
@@ -154,8 +170,8 @@ export function useMatcapScene() {
     scene = new THREE.Scene()
 
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100)
-    camera.position.set(0, 1.8, settings.zoomLevel)
-    camera.lookAt(0, 0.6, 0)
+    camera.position.copy(DEFAULT_CAMERA_POSITION)
+    camera.lookAt(DEFAULT_CAMERA_TARGET)
 
     webgpuSupported.value = !!(navigator as any).gpu
 
@@ -173,7 +189,7 @@ export function useMatcapScene() {
     controls.minDistance = 2
     controls.maxDistance = 15
     controls.maxPolarAngle = Math.PI * 0.85
-    controls.target.set(0, 0.6, 0)
+    controls.target.copy(DEFAULT_CAMERA_TARGET)
 
     createLights()
     await createEnvironmentMap()
@@ -233,12 +249,126 @@ export function useMatcapScene() {
     pmrem.dispose()
   }
 
+  function setBackgroundTexture(texture: THREE.Texture) {
+    backgroundTexture?.dispose()
+    backgroundTexture = texture
+    scene.background = texture
+  }
+
+  function createSkyBackground(isNight: boolean) {
+    const canvas = document.createElement('canvas')
+    canvas.width = 1024
+    canvas.height = 1024
+    const ctx = canvas.getContext('2d')!
+
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height)
+    function drawFluffyCloud(x: number, y: number, scale: number, alpha: number) {
+      const puffs = [
+        { dx: -120, dy: 28, rx: 76, ry: 40 },
+        { dx: -48, dy: 6, rx: 92, ry: 56 },
+        { dx: 34, dy: -6, rx: 116, ry: 66 },
+        { dx: 132, dy: 18, rx: 82, ry: 46 },
+        { dx: 24, dy: 42, rx: 170, ry: 34 },
+      ]
+
+      ctx.save()
+      ctx.globalAlpha = alpha
+      for (const puff of puffs) {
+        const cx = x + puff.dx * scale
+        const cy = y + puff.dy * scale
+        const rx = puff.rx * scale
+        const ry = puff.ry * scale
+        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(rx, ry))
+        g.addColorStop(0, 'rgba(255,255,255,0.95)')
+        g.addColorStop(0.58, 'rgba(245,250,255,0.82)')
+        g.addColorStop(1, 'rgba(255,255,255,0)')
+        ctx.fillStyle = g
+        ctx.beginPath()
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      ctx.restore()
+    }
+
+    if (isNight) {
+      grad.addColorStop(0, '#08111f')
+      grad.addColorStop(0.35, '#10233f')
+      grad.addColorStop(0.72, '#21395a')
+      grad.addColorStop(1, '#41536e')
+    } else {
+      grad.addColorStop(0, '#5b8fbf')
+      grad.addColorStop(0.3, '#7badd4')
+      grad.addColorStop(0.58, '#a8cce4')
+      grad.addColorStop(0.8, '#d4e4ef')
+      grad.addColorStop(1, '#eef5fa')
+    }
+    ctx.fillStyle = grad
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+    if (isNight) {
+      for (let i = 0; i < 140; i++) {
+        const x = Math.random() * canvas.width
+        const y = Math.random() * canvas.height * 0.78
+        const r = Math.random() * 1.6 + 0.3
+        ctx.beginPath()
+        ctx.fillStyle = `rgba(255,255,255,${0.35 + Math.random() * 0.55})`
+        ctx.arc(x, y, r, 0, Math.PI * 2)
+        ctx.fill()
+      }
+
+      const moonX = canvas.width * 0.78
+      const moonY = canvas.height * 0.19
+      const moonGrad = ctx.createRadialGradient(moonX, moonY, 12, moonX, moonY, 54)
+      moonGrad.addColorStop(0, 'rgba(255, 248, 220, 0.95)')
+      moonGrad.addColorStop(0.55, 'rgba(255, 248, 220, 0.35)')
+      moonGrad.addColorStop(1, 'rgba(255, 248, 220, 0)')
+      ctx.fillStyle = moonGrad
+      ctx.beginPath()
+      ctx.arc(moonX, moonY, 54, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.fillStyle = 'rgba(255, 248, 220, 0.92)'
+      ctx.beginPath()
+      ctx.arc(moonX, moonY, 19, 0, Math.PI * 2)
+      ctx.fill()
+    } else {
+      drawFluffyCloud(250, 250, 1.1, 0.82)
+      drawFluffyCloud(760, 205, 0.82, 0.72)
+      drawFluffyCloud(655, 360, 1.02, 0.76)
+    }
+
+    const tex = new THREE.CanvasTexture(canvas)
+    tex.colorSpace = THREE.SRGBColorSpace
+    return tex
+  }
+
+  function getReadablePlatformColor(colorValue: string | number) {
+    const color = new THREE.Color(colorValue)
+    const hsl = { h: 0, s: 0, l: 0 }
+    color.getHSL(hsl)
+
+    // Lift only the darkest grounds so cast shadows stay visible.
+    if (hsl.l < 0.12) color.offsetHSL(0, 0, 0.065)
+    else if (hsl.l < 0.18) color.offsetHSL(0, 0, 0.045)
+    else if (hsl.l < 0.24) color.offsetHSL(0, 0, 0.02)
+
+    return color
+  }
+
+  function getMatcapInfo(name: string): MatcapEntry {
+    return MATCAPS[name] ?? MATCAPS.steel!
+  }
+
+  function getGeometryFactory(name: string): () => THREE.BufferGeometry {
+    return GEOMETRIES[name] ?? GEOMETRIES['Torus Knot']!
+  }
+
   async function loadMatcapTexture(name: string) {
+    const info = getMatcapInfo(name)
     if (matcapTextures[name]) return matcapTextures[name]
     return new Promise<THREE.Texture>((resolve) => {
       textureLoader.load(
-        baseURL + MATCAPS[name].path.replace(/^\//, ''),
-        (tex) => { tex.colorSpace = THREE.SRGBColorSpace; matcapTextures[name] = tex; resolve(tex) },
+        baseURL + info.path.replace(/^\//, ''),
+        (tex: THREE.Texture) => { tex.colorSpace = THREE.SRGBColorSpace; matcapTextures[name] = tex; resolve(tex) },
         undefined,
         () => { console.warn(`Failed to load matcap: ${name}`); resolve(matcapTextures['chrome'] || new THREE.Texture()) }
       )
@@ -248,7 +378,7 @@ export function useMatcapScene() {
   function createMaterials() {
     matcapMaterial = new THREE.MeshMatcapMaterial({ matcap: matcapTextures[settings.matcap] })
 
-    const info = MATCAPS[settings.matcap]
+    const info = getMatcapInfo(settings.matcap)
     pbrMaterial = new THREE.MeshStandardMaterial({
       color: info.color,
       metalness: info.metalness,
@@ -274,7 +404,7 @@ export function useMatcapScene() {
     if (matcapMesh) { scene.remove(matcapMesh); matcapMesh.geometry.dispose() }
     if (pbrMesh) { scene.remove(pbrMesh); pbrMesh.geometry.dispose() }
 
-    const geometry = GEOMETRIES[settings.geometry]()
+    const geometry = getGeometryFactory(settings.geometry)()
     geometry.computeBoundingBox()
     const bbox = geometry.boundingBox!
     const platformTopY = -0.5 + 0.075
@@ -304,13 +434,14 @@ export function useMatcapScene() {
       pbrMesh.position.x = 1.5
       pbrMesh.visible = true
 
-      // Add labels on the platform
-      matcapLabel = createTextSprite('MATCAP')
-      matcapLabel.position.set(-1.5, -0.35, 1.8)
+      // Flat labels on the platform surface
+      const platformTopY = -0.5 + 0.075 + 0.005 // just above platform
+      matcapLabel = createPlatformLabel('MATCAP')
+      matcapLabel.position.set(-1.5, platformTopY, 1.6)
       scene.add(matcapLabel)
 
-      pbrLabel = createTextSprite('PBR')
-      pbrLabel.position.set(1.5, -0.35, 1.8)
+      pbrLabel = createPlatformLabel('PBR')
+      pbrLabel.position.set(1.5, platformTopY, 1.6)
       scene.add(pbrLabel)
     } else {
       matcapMesh.position.x = 0
@@ -320,6 +451,14 @@ export function useMatcapScene() {
 
   function updateEnvironment() {
     const env = ENVIRONMENTS[settings.environment] as EnvPreset
+    if (settings.environment === 'Sky') {
+      setBackgroundTexture(createSkyBackground(!settings.showLights))
+      if (platform?.material instanceof THREE.MeshStandardMaterial) {
+        platform.material.color.copy(getReadablePlatformColor(settings.showLights ? 0x8a9a6a : 0x2d3647))
+      }
+      return
+    }
+
     if (env.type === 'gradient') {
       const canvas = document.createElement('canvas')
       canvas.width = 2; canvas.height = 512
@@ -329,25 +468,28 @@ export function useMatcapScene() {
       ctx.fillStyle = grad; ctx.fillRect(0, 0, 2, 512)
       const tex = new THREE.CanvasTexture(canvas)
       tex.colorSpace = THREE.SRGBColorSpace
-      scene.background = tex
+      setBackgroundTexture(tex)
     } else {
+      backgroundTexture?.dispose()
+      backgroundTexture = null
       scene.background = new THREE.Color(env.color)
     }
     if (platform?.material instanceof THREE.MeshStandardMaterial) {
-      platform.material.color.set(env.ground)
+      platform.material.color.copy(getReadablePlatformColor(env.ground))
     }
   }
 
   function updateLightsVisibility() {
     directionalLight.visible = pointLight.visible = ambientLight.visible = settings.showLights
     scene.environment = settings.showLights ? null : envMap
+    updateEnvironment()
   }
 
   async function updateMatcap() {
     await loadMatcapTexture(settings.matcap)
     matcapMaterial.matcap = matcapTextures[settings.matcap]
     matcapMaterial.needsUpdate = true
-    const info = MATCAPS[settings.matcap]
+    const info = getMatcapInfo(settings.matcap)
     if (pbrMaterial) {
       pbrMaterial.color.setHex(info.color)
       pbrMaterial.metalness = info.metalness
@@ -363,6 +505,37 @@ export function useMatcapScene() {
     pbrMaterial.roughness = settings.pbrRoughness
   }
 
+  function animateCamera(position: THREE.Vector3, target: THREE.Vector3, duration = 650) {
+    if (!camera || !controls) return
+    if (cameraTweenId) cancelAnimationFrame(cameraTweenId)
+
+    const startPos = camera.position.clone()
+    const startTarget = controls.target.clone()
+    const startZoom = settings.zoomLevel
+    const endZoom = position.distanceTo(target)
+    const startTime = performance.now()
+
+    const ease = (t: number) => 1 - Math.pow(1 - t, 3)
+
+    const step = (now: number) => {
+      const raw = Math.min(1, (now - startTime) / duration)
+      const t = ease(raw)
+      camera.position.lerpVectors(startPos, position, t)
+      controls.target.lerpVectors(startTarget, target, t)
+      settings.zoomLevel = startZoom + (endZoom - startZoom) * t
+      camera.lookAt(controls.target)
+      controls.update()
+
+      if (raw < 1) {
+        cameraTweenId = requestAnimationFrame(step)
+      } else {
+        cameraTweenId = null
+      }
+    }
+
+    cameraTweenId = requestAnimationFrame(step)
+  }
+
   function updateZoom() {
     const d = settings.zoomLevel, a = controls.getAzimuthalAngle(), p = controls.getPolarAngle()
     camera.position.set(d * Math.sin(p) * Math.sin(a), d * Math.cos(p), d * Math.sin(p) * Math.cos(a))
@@ -370,7 +543,12 @@ export function useMatcapScene() {
 
   function zoomIn() { settings.zoomLevel = Math.max(2, settings.zoomLevel - 0.5); updateZoom() }
   function zoomOut() { settings.zoomLevel = Math.min(15, settings.zoomLevel + 0.5); updateZoom() }
-  function resetView() { settings.zoomLevel = 5; camera.position.set(0, 1.8, 5); controls.target.set(0, 0.6, 0); controls.update() }
+  function resetView() {
+    animateCamera(DEFAULT_CAMERA_POSITION.clone(), DEFAULT_CAMERA_TARGET.clone())
+  }
+  function focusObject() {
+    animateCamera(new THREE.Vector3(0, 1.25, 3.6), new THREE.Vector3(0, 0.6, 0), 520)
+  }
   function getCamera() { return camera }
   function getControls() { return controls }
 
@@ -391,9 +569,20 @@ export function useMatcapScene() {
     renderer.render(scene, camera)
   }
 
+  function disposeLabel(label: THREE.Mesh | null) {
+    if (!label) return
+    label.geometry.dispose()
+    if (label.material instanceof THREE.Material) label.material.dispose()
+    scene?.remove(label)
+  }
+
   function dispose() {
     if (animationId) cancelAnimationFrame(animationId)
+    if (cameraTweenId) cancelAnimationFrame(cameraTweenId)
     window.removeEventListener('resize', onWindowResize)
+    disposeLabel(matcapLabel)
+    disposeLabel(pbrLabel)
+    backgroundTexture?.dispose()
     renderer?.dispose()
     matcapMaterial?.dispose()
     pbrMaterial?.dispose()
@@ -412,5 +601,5 @@ export function useMatcapScene() {
   watch(() => settings.pbrMetalness, updatePBRMaterial)
   watch(() => settings.pbrRoughness, updatePBRMaterial)
 
-  return { settings, webgpuSupported, activeRenderer, init, dispose, zoomIn, zoomOut, resetView, getCamera, getControls, MATCAPS, GEOMETRIES, ENVIRONMENTS }
+  return { settings, webgpuSupported, activeRenderer, init, dispose, zoomIn, zoomOut, resetView, focusObject, getCamera, getControls, MATCAPS, GEOMETRIES, ENVIRONMENTS }
 }

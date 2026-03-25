@@ -10,7 +10,8 @@ export default defineNuxtConfig({
     head: {
       title: 'Matcap Explorer - Three.js Demo',
       link: [
-        { rel: 'icon', type: 'image/png', href: '/favicon.png' }
+        { rel: 'icon', type: 'image/svg+xml', href: '/matcap-demo/favicon.svg' },
+        { rel: 'icon', type: 'image/png', href: '/matcap-demo/favicon.png' }
       ],
       meta: [
         { name: 'description', content: 'Interactive demo showcasing Matcap materials in Three.js with PBR comparison' }

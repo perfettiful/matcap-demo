@@ -50,6 +50,24 @@ export const MATCAPS: Record<string, MatcapEntry> = {
   matteWhite:   { path: '/matcaps/matteWhite.png',      color: 0xe8e8e0, metalness: 0.0,  roughness: 0.6 },
 }
 
+/** Display names for matcap keys */
+export const MATCAP_LABELS: Record<string, string> = {
+  chrome: 'Chrome',
+  brushedNickel: 'Brushed Nickel',
+  nickel: 'Nickel',
+  steel: 'Steel',
+  brass: 'Brass',
+  satinGold: 'Satin Gold',
+  gold: 'Gold',
+  roseGold: 'Rose Gold',
+  copper: 'Copper',
+  darkBronze: 'Dark Bronze',
+  bronze: 'Bronze',
+  gunmetal: 'Gunmetal',
+  matteBlack: 'Matte Black',
+  matteWhite: 'Matte White',
+}
+
 export const GEOMETRIES_LIST = [
   'Torus Knot', 'Sphere', 'Torus', 'Rounded Cube',
   'Capsule', 'Cylinder', 'Handle', 'Knob',
@@ -57,13 +75,14 @@ export const GEOMETRIES_LIST = [
 
 export const ENVIRONMENTS: Record<string, EnvPreset> = {
   'Studio': { type: 'gradient', stops: [
-    { pos: 0, color: '#3a3a42' }, { pos: 0.4, color: '#2c2c32' },
-    { pos: 0.7, color: '#222228' }, { pos: 1, color: '#1a1a1e' }
-  ], ground: '#1e1e22' },
-  'Warm': { type: 'gradient', stops: [
     { pos: 0, color: '#44403a' }, { pos: 0.35, color: '#36322e' },
     { pos: 0.7, color: '#2a2826' }, { pos: 1, color: '#1e1c1a' }
   ], ground: '#22201e' },
+  'Sky': { type: 'gradient', stops: [
+    { pos: 0, color: '#5b8fbf' }, { pos: 0.3, color: '#7badd4' },
+    { pos: 0.55, color: '#a8cce4' }, { pos: 0.75, color: '#d4e4ef' },
+    { pos: 1, color: '#e8eff5' }
+  ], ground: '#8a9a6a' },
   'Sunset': { type: 'gradient', stops: [
     { pos: 0, color: '#3d2840' }, { pos: 0.3, color: '#42283a' },
     { pos: 0.6, color: '#382230' }, { pos: 1, color: '#1e1418' }
