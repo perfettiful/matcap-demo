@@ -70,7 +70,9 @@ export const MATCAP_LABELS: Record<string, string> = {
 
 export const GEOMETRIES_LIST = [
   'Torus Knot', 'Sphere', 'Torus', 'Rounded Cube',
-  'Capsule', 'Cylinder', 'Handle', 'Knob',
+  'Shower Head', 'Angle Stop Valve', 'Tub Spout', 'Lever Handle',
+  'Escutcheon Plate',
+  'Towel Ring', 'Handle', 'Knob',
 ] as const
 
 export const ENVIRONMENTS: Record<string, EnvPreset> = {

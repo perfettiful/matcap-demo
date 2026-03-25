@@ -8,8 +8,12 @@ const GEOMETRIES: Record<string, () => THREE.BufferGeometry> = {
   'Sphere': () => new THREE.SphereGeometry(1, 64, 64),
   'Torus': () => new THREE.TorusGeometry(0.7, 0.3, 32, 100),
   'Rounded Cube': () => createRoundedBox(1.2, 1.2, 1.2, 10),
-  'Capsule': () => new THREE.CapsuleGeometry(0.55, 0.9, 16, 32),
-  'Cylinder': () => new THREE.CylinderGeometry(0.65, 0.65, 3, 64, 1, false),
+  'Shower Head': () => createShowerHeadGeometry(),
+  'Angle Stop Valve': () => createAngleStopValveGeometry(),
+  'Tub Spout': () => createTubSpoutGeometry(),
+  'Lever Handle': () => createLeverHandleGeometry(),
+  'Escutcheon Plate': () => createEscutcheonPlateGeometry(),
+  'Towel Ring': () => createTowelRingGeometry(),
   'Handle': () => createHandleGeometry(),
   'Knob': () => createKnobGeometry(),
 }
@@ -57,6 +61,147 @@ function createKnobGeometry() {
     points.push(new THREE.Vector2(r, -0.5 + t * 1.0))
   }
   return new THREE.LatheGeometry(points, 32)
+}
+
+function createShowerHeadGeometry() {
+  const wallFlange = new THREE.CylinderGeometry(0.23, 0.23, 0.08, 28, 1, false)
+  wallFlange.rotateZ(Math.PI / 2)
+  wallFlange.translate(-0.82, 0.18, 0)
+
+  const arm = new THREE.CylinderGeometry(0.07, 0.08, 0.9, 24, 1, false)
+  arm.rotateZ(Math.PI / 2)
+  arm.translate(-0.36, 0.18, 0)
+
+  const elbow = new THREE.SphereGeometry(0.125, 18, 18)
+  elbow.translate(0.05, 0.18, 0)
+
+  const neck = new THREE.CylinderGeometry(0.085, 0.1, 0.58, 24, 1, false)
+  neck.rotateZ(-0.78)
+  neck.translate(0.26, 0.34, 0)
+
+  const neckBlend = new THREE.SphereGeometry(0.16, 18, 18)
+  neckBlend.translate(0.47, 0.54, 0)
+
+  const headStem = new THREE.CylinderGeometry(0.13, 0.16, 0.2, 24, 1, false)
+  headStem.rotateZ(Math.PI / 2)
+  headStem.translate(0.58, 0.56, 0)
+
+  const backCap = new THREE.CylinderGeometry(0.34, 0.42, 0.16, 32, 1, false)
+  backCap.rotateZ(Math.PI / 2)
+  backCap.translate(0.67, 0.58, 0)
+
+  const headBody = new THREE.CylinderGeometry(0.5, 0.46, 0.26, 40, 1, false)
+  headBody.rotateZ(Math.PI / 2)
+  headBody.translate(0.86, 0.58, 0)
+
+  const facePlate = new THREE.CylinderGeometry(0.5, 0.5, 0.03, 40, 1, false)
+  facePlate.rotateZ(Math.PI / 2)
+  facePlate.translate(1.0, 0.58, 0)
+
+  const rim = new THREE.TorusGeometry(0.5, 0.02, 10, 36)
+  rim.rotateY(Math.PI / 2)
+  rim.translate(0.995, 0.58, 0)
+
+  return mergeBufferGeometries([wallFlange, arm, elbow, neck, neckBlend, headStem, backCap, headBody, facePlate, rim])
+}
+
+function createAngleStopValveGeometry() {
+  const body = new THREE.CylinderGeometry(0.17, 0.17, 0.82, 24, 1, false)
+  body.rotateZ(Math.PI / 2)
+  body.translate(0.1, 0, 0)
+
+  const outlet = new THREE.CylinderGeometry(0.11, 0.11, 0.65, 24, 1, false)
+  outlet.translate(-0.28, 0.32, 0)
+
+  const hub = new THREE.SphereGeometry(0.18, 18, 18)
+  hub.translate(-0.28, 0, 0)
+
+  const knob = new THREE.CylinderGeometry(0.2, 0.2, 0.08, 24, 1, false)
+  knob.rotateX(Math.PI / 2)
+  knob.translate(-0.28, -0.06, 0)
+
+  const crossA = new THREE.BoxGeometry(0.5, 0.08, 0.08)
+  crossA.translate(-0.28, -0.06, 0)
+  const crossB = new THREE.BoxGeometry(0.08, 0.32, 0.08)
+  crossB.translate(-0.28, -0.06, 0)
+
+  return mergeBufferGeometries([body, outlet, hub, knob, crossA, crossB])
+}
+
+function createTubSpoutGeometry() {
+  const body = new THREE.CylinderGeometry(0.18, 0.18, 1.45, 32, 1, false)
+  body.rotateZ(Math.PI / 2)
+  body.translate(0.15, 0.28, 0)
+
+  const neck = new THREE.CylinderGeometry(0.22, 0.22, 0.5, 32, 1, false)
+  neck.translate(-0.55, 0.02, 0)
+
+  const flare = new THREE.CylinderGeometry(0.1, 0.18, 0.38, 32, 1, false)
+  flare.rotateZ(Math.PI / 2)
+  flare.translate(0.95, 0.28, 0)
+
+  const lip = new THREE.TorusGeometry(0.1, 0.022, 12, 24)
+  lip.rotateY(Math.PI / 2)
+  lip.translate(1.11, 0.28, 0)
+
+  return mergeBufferGeometries([body, neck, flare, lip])
+}
+
+function createLeverHandleGeometry() {
+  const base = new THREE.CylinderGeometry(0.18, 0.22, 0.18, 32, 1, false)
+  base.translate(0, -0.22, 0)
+
+  const arm = new THREE.CylinderGeometry(0.075, 0.09, 1.4, 24, 1, false)
+  arm.rotateZ(-Math.PI / 2)
+  arm.rotateY(0.22)
+  arm.translate(0.55, 0.02, 0)
+
+  const tip = new THREE.SphereGeometry(0.1, 18, 18)
+  tip.translate(1.2, 0.05, -0.05)
+
+  const hub = new THREE.CylinderGeometry(0.1, 0.12, 0.16, 24, 1, false)
+  hub.translate(0.08, -0.08, 0)
+
+  return mergeBufferGeometries([base, hub, arm, tip])
+}
+
+function createEscutcheonPlateGeometry() {
+  const profile = [
+    // Start at a real inner opening so the lathe doesn't collapse to a wrinkled pole.
+    new THREE.Vector2(0.18, -0.03),
+    new THREE.Vector2(0.62, -0.032),
+    new THREE.Vector2(0.8, -0.028),
+    new THREE.Vector2(0.9, -0.012),
+    new THREE.Vector2(0.94, 0),
+    new THREE.Vector2(0.9, 0.012),
+    new THREE.Vector2(0.8, 0.028),
+    new THREE.Vector2(0.62, 0.032),
+    new THREE.Vector2(0.18, 0.03),
+  ]
+  // Offset the lathe seam away from the visible front face.
+  const plate = new THREE.LatheGeometry(profile, 128, Math.PI, Math.PI * 2)
+
+  const collar = new THREE.TorusGeometry(0.22, 0.05, 12, 32)
+  collar.rotateX(Math.PI / 2)
+
+  return mergeBufferGeometries([plate, collar])
+}
+
+function createTowelRingGeometry() {
+  const ring = new THREE.TorusGeometry(0.72, 0.07, 16, 64)
+  ring.translate(0.18, 0.1, 0)
+
+  const arm = new THREE.CylinderGeometry(0.05, 0.06, 0.42, 18, 1, false)
+  arm.rotateZ(Math.PI / 2)
+  arm.translate(-0.4, 0.1, 0)
+
+  const mount = new THREE.CylinderGeometry(0.14, 0.16, 0.12, 24, 1, false)
+  mount.translate(-0.64, 0.1, 0)
+
+  const join = new THREE.SphereGeometry(0.075, 14, 14)
+  join.translate(-0.18, 0.1, 0)
+
+  return mergeBufferGeometries([ring, arm, mount, join])
 }
 
 function mergeBufferGeometries(geos: THREE.BufferGeometry[]) {

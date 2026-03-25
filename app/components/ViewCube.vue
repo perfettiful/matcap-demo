@@ -20,6 +20,7 @@ let cubeBox: THREE.Mesh
 let animId: number | null = null
 let lastMouse = { x: 0, y: 0 }
 const isHovering = ref(false)
+const hoveredAction = ref<'home' | 'focus' | null>(null)
 const raycaster = new THREE.Raycaster()
 const pointer = new THREE.Vector2()
 let dragDistance = 0
@@ -278,17 +279,21 @@ onUnmounted(() => {
       <button
         @click="resetView"
         title="Reset view"
+        @mouseenter="hoveredAction = 'home'"
+        @mouseleave="hoveredAction = null"
         :style="{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           height: '18px',
           borderRadius: '6px',
-          border: '1px solid rgba(255,255,255,0.08)',
-          background: 'rgba(24,24,30,0.55)',
-          color: 'rgba(255,255,255,0.72)',
+          border: hoveredAction === 'home' ? '1px solid rgba(232,164,74,0.38)' : '1px solid rgba(255,255,255,0.08)',
+          background: hoveredAction === 'home' ? 'rgba(232,164,74,0.16)' : 'rgba(24,24,30,0.55)',
+          color: hoveredAction === 'home' ? '#f2c27a' : 'rgba(255,255,255,0.72)',
           cursor: 'pointer',
-          transition: 'background 0.15s ease, border-color 0.15s ease, color 0.15s ease',
+          transform: hoveredAction === 'home' ? 'translateY(-1px)' : 'translateY(0)',
+          boxShadow: hoveredAction === 'home' ? '0 3px 10px rgba(232,164,74,0.16)' : 'none',
+          transition: 'background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
         }"
       >
         <House :size="10" />
@@ -296,17 +301,21 @@ onUnmounted(() => {
       <button
         @click="focusObject"
         title="Focus object"
+        @mouseenter="hoveredAction = 'focus'"
+        @mouseleave="hoveredAction = null"
         :style="{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           height: '18px',
           borderRadius: '6px',
-          border: '1px solid rgba(255,255,255,0.08)',
-          background: 'rgba(24,24,30,0.55)',
-          color: 'rgba(255,255,255,0.72)',
+          border: hoveredAction === 'focus' ? '1px solid rgba(232,164,74,0.38)' : '1px solid rgba(255,255,255,0.08)',
+          background: hoveredAction === 'focus' ? 'rgba(232,164,74,0.16)' : 'rgba(24,24,30,0.55)',
+          color: hoveredAction === 'focus' ? '#f2c27a' : 'rgba(255,255,255,0.72)',
           cursor: 'pointer',
-          transition: 'background 0.15s ease, border-color 0.15s ease, color 0.15s ease',
+          transform: hoveredAction === 'focus' ? 'translateY(-1px)' : 'translateY(0)',
+          boxShadow: hoveredAction === 'focus' ? '0 3px 10px rgba(232,164,74,0.16)' : 'none',
+          transition: 'background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
         }"
       >
         <Focus :size="10" />
