@@ -128,6 +128,7 @@ export function useMatcapScene() {
 
   const textureLoader = new THREE.TextureLoader()
   const matcapTextures: Record<string, THREE.Texture> = {}
+  const baseURL = useRuntimeConfig().app.baseURL
 
   let canvasEl: HTMLCanvasElement
   let initialized = false
@@ -236,7 +237,7 @@ export function useMatcapScene() {
     if (matcapTextures[name]) return matcapTextures[name]
     return new Promise<THREE.Texture>((resolve) => {
       textureLoader.load(
-        MATCAPS[name].path,
+        baseURL + MATCAPS[name].path.replace(/^\//, ''),
         (tex) => { tex.colorSpace = THREE.SRGBColorSpace; matcapTextures[name] = tex; resolve(tex) },
         undefined,
         () => { console.warn(`Failed to load matcap: ${name}`); resolve(matcapTextures['chrome'] || new THREE.Texture()) }

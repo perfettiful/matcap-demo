@@ -6,6 +6,7 @@ export default defineNuxtConfig({
   ssr: false,
 
   app: {
+    baseURL: '/matcap-demo/',
     head: {
       title: 'Matcap Explorer - Three.js Demo',
       link: [
