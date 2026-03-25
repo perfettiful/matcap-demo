@@ -1,177 +1,120 @@
 # Matcap Material Demo
 
-Live Demo: [https://perfettiful.github.io/matcap-demo/](https://perfettiful.github.io/matcap-demo/)
+Live demo: [https://perfettiful.github.io/matcap-demo/](https://perfettiful.github.io/matcap-demo/)
 
-An interactive Three.js demo exploring **Matcap (Material Capture)** materials - a technique for rendering beautiful materials without scene lights.
+This project is an interactive Three.js demo for exploring matcap materials in a fast, visual way. It compares matcap shading against standard PBR shading, lets you swap materials, geometry, and environments, and includes a compact control system built for quick inspection.
 
-## What is a Matcap?
+## What a matcap is
 
-A **Matcap** is a texture that encodes lighting and material properties in a single image of a shaded sphere. Instead of calculating lighting in real-time, the shader simply looks up colors from this texture based on surface normals.
+A matcap, short for material capture, stores the look of a lit material inside a single texture. Instead of evaluating scene lighting for every pixel, the shader uses the surface normal to sample that texture.
 
-### The Key Insight
+In practice, that means:
 
-**Matcaps don't need lights.** The lighting is "baked" into the texture itself. This demo includes a "Scene Lights" toggle to prove it - turn on the lights and watch the Matcap stay exactly the same while the PBR material changes.
+* The material can look polished and expressive with very little setup.
+* It is excellent for previews, stylized rendering, and quick iteration.
+* It does not react to scene lights the same way a true PBR material does.
 
-### How It Works
+This demo makes that tradeoff obvious by showing matcap and PBR side by side on the same object.
 
-```
-1. For each pixel, get the surface normal in view space
-2. Map the normal's X,Y components to UV coordinates
-3. Sample the matcap texture at those coordinates
-4. That's your final color - no lighting math needed!
-```
+## What the app includes
 
-```glsl
-// Simplified shader logic
-vec3 viewNormal = normalize(normalMatrix * normal);
-vec2 uv = viewNormal.xy * 0.5 + 0.5;
-vec3 color = texture2D(matcapTexture, uv).rgb;
-```
+* Fourteen curated matcap textures with a swatch picker.
+* Twelve geometry options, including both classic demo forms and more product oriented forms.
+* Six environment presets with coordinated platform colors.
+* A reactive Sky preset that changes between day and night when lights are toggled.
+* Side by side comparison mode for matcap versus PBR.
+* A `ViewCube` for orientation, snapping, reset, and focus.
+* Small UX details like animated pickers, interaction hints, hover states, keyboard shortcuts, and camera easing.
 
-### When to Use Matcaps
+## Current geometry set
 
-| Use Case | Matcap | PBR |
-|----------|--------|-----|
-| Stylized/artistic rendering | Best choice | Overkill |
-| Quick prototyping | Best choice | More setup |
-| Mobile/performance-critical | Best choice | Heavier |
-| Sculpting preview (ZBrush-style) | Best choice | Not needed |
-| Photorealistic rendering | Limited | Best choice |
-| Dynamic/moving lights | Not supported | Best choice |
-| Real reflections | Not supported | Best choice |
+* `Torus Knot`
+* `Sphere`
+* `Torus`
+* `Rounded Cube`
+* `Shower Head`
+* `Angle Stop Valve`
+* `Tub Spout`
+* `Lever Handle`
+* `Escutcheon Plate`
+* `Towel Ring`
+* `Handle`
+* `Knob`
 
-### Limitations
+## Controls
 
-- Lighting doesn't respond to scene lights (by design)
-- No real reflections or environment mapping
-- Less effective on flat/angular geometry (needs curved surfaces)
-- Lighting is view-dependent (always "faces" the camera)
+* Left drag rotates the camera.
+* Right drag pans the camera.
+* Mouse wheel zooms in and out.
+* `R` resets the view.
+* `F` focuses the object.
+* `L` toggles lights.
+* `C` toggles comparison mode.
+* `P` toggles the side panel.
+* Dragging the `ViewCube` or clicking its faces changes camera orientation.
 
-## Features
-
-### Materials
-- **14 curated matcaps** with visual swatch picker
-- Metallic presets and dark/light finishes for quick comparison
-- Live label feedback and side-by-side PBR comparison
-
-### Geometry
-- 8 shapes: Torus Knot, Sphere, Torus, Rounded Cube, Capsule, Cylinder, Handle, Knob
-
-### Environment
-- 6 background presets with coordinated platform colors
-- Reactive `Sky` preset with day/night behavior tied to the light toggle
-- Visual environment picker with thumbnail previews
-- Toggle platform visibility
-
-### Lighting Demo
-- Scene lights toggle to demonstrate matcap's light-independence
-- When enabled: directional light + point light + ambient
-- Matcap ignores them, PBR responds
-
-### PBR Comparison
-- Side-by-side comparison mode
-- Adjustable metalness and roughness for the PBR material
-- Shows the difference between baked (matcap) vs calculated (PBR) lighting
-
-### Camera Controls
-- Drag to rotate
-- Scroll to zoom
-- Right-drag to pan
-- Zoom In/Out buttons
-- Reset View / Focus controls in the `ViewCube`
-- Orientation `ViewCube` / gizmo for quick camera context
-
-## Tech Stack
-
-### Framework
-- **[Nuxt 4](https://nuxt.com/)** - Vue.js meta-framework
-  - File-based routing
-  - Auto-imports for composables
-  - Server-side rendering capable
-
-### 3D Graphics
-- **[Three.js](https://threejs.org/)** - WebGL 3D library
-  - `MeshMatcapMaterial` - The core material type
-  - `MeshStandardMaterial` - For PBR comparison
-  - `OrbitControls` - Camera interaction
-  - `PMREMGenerator` - Environment map generation
-
-### Styling
-- **[Tailwind CSS 4](https://tailwindcss.com/)** - Utility-first CSS
-  - CSS-first configuration with `@theme`
-  - Custom color tokens
-  - Glass morphism effects
-
-### Links
-- [Three.js MeshMatcapMaterial Docs](https://threejs.org/docs/#api/en/materials/MeshMatcapMaterial)
-- [Three.js Matcap Example](https://threejs.org/examples/#webgl_materials_matcap)
-- [nidorx/matcaps](https://github.com/nidorx/matcaps) - Huge free matcap library (textures used here)
-- [Matcap Observable Gallery](https://observablehq.com/@makio135/matcaps) - Browse matcaps visually
-
-## Getting Started
+## Getting started
 
 ```bash
-# Install dependencies
 npm install
-
-# Start development server
 npm run dev
-
-# Open in browser
-open http://localhost:3000
 ```
 
-## Project Structure
+Then open `http://localhost:3000`.
 
-```text
-matcap-demo/
-├── app/
-│   ├── app.vue
-│   ├── assets/css/main.css
-│   ├── composables/
-│   │   ├── useFlipLabel.ts
-│   │   └── useMatcapScene.ts
-│   ├── components/
-│   │   ├── ViewCube.vue
-│   │   ├── MatcapPicker.vue
-│   │   ├── GeometryPicker.vue
-│   │   ├── EnvironmentPicker.vue
-│   │   └── ...
-│   └── types/scene.ts
-├── public/
-│   ├── favicon.svg
-│   └── matcaps/
-├── nuxt.config.ts
-└── package.json
+For a production build:
+
+```bash
+npm run build
 ```
 
-## Controls Reference
+For a static export:
 
-| Control | Action |
-|---------|--------|
-| Left-drag | Rotate camera |
-| Scroll | Zoom in/out |
-| Right-drag | Pan camera |
-| Zoom In button | Step zoom in |
-| Zoom Out button | Step zoom out |
-| Home button | Smoothly return to default camera position |
-| Focus button | Frame the object more tightly |
-| ViewCube drag | Orbit the camera from the orientation gizmo |
+```bash
+npm run generate
+```
 
-## Matcap Textures
+## Project structure
 
-Textures are sourced from [nidorx/matcaps](https://github.com/nidorx/matcaps) and trimmed down to the curated set used in the demo:
+* `app/app.vue`: Main application shell and UI composition.
+* `app/composables/useMatcapScene.ts`: Three.js scene setup, geometry creation, camera logic, lighting, and environment behavior.
+* `app/composables/useFlipLabel.ts`: Shared animated label logic for the picker components.
+* `app/components/`: UI building blocks such as `ViewCube`, pickers, sliders, toggles, info panel, and accordion sections.
+* `app/types/scene.ts`: Scene settings, material data, geometry lists, and environment presets.
+* `app/assets/css/main.css`: Global styles and custom control styling.
+* `public/matcaps/`: Matcap texture assets used by the demo.
+
+## Tech stack
+
+* [Nuxt 4](https://nuxt.com/)
+* [Vue 3](https://vuejs.org/)
+* [Three.js](https://threejs.org/)
+* [Tailwind CSS 4](https://tailwindcss.com/)
+* [lucide-vue-next](https://github.com/lucide-icons/lucide)
+
+## Notes on the implementation
+
+* Most of the custom shapes are generated procedurally in code from basic Three.js geometry primitives.
+* The comparison labels on the platform are rendered as flat decals rather than DOM overlays.
+* The `Sky` environment background is drawn to a canvas texture so it can respond to the light toggle.
+* The `ViewCube` is a separate scene rendered to its own canvas and synced to the main camera quaternion.
+
+## Matcap set
+
+The current set includes:
 
 `chrome`, `brushedNickel`, `nickel`, `steel`, `brass`, `satinGold`, `gold`, `roseGold`, `copper`, `darkBronze`, `bronze`, `gunmetal`, `matteBlack`, `matteWhite`
 
-## Creating Your Own Matcaps
+Textures are sourced from [nidorx/matcaps](https://github.com/nidorx/matcaps).
 
-1. **In Blender**: Render a sphere with your desired material/lighting to a square image
-2. **In Photoshop**: Paint a sphere with gradient tools
-3. **From photos**: Photograph a chrome ball bearing in your lighting environment
-4. **Tools**: [Matcap Studio](https://github.com/kchapelier/matcap-studio) for tweaking existing matcaps
+## Useful references
+
+* [Three.js MeshMatcapMaterial docs](https://threejs.org/docs/#api/en/materials/MeshMatcapMaterial)
+* [Three.js matcap example](https://threejs.org/examples/#webgl_materials_matcap)
+* [nidorx/matcaps](https://github.com/nidorx/matcaps)
 
 ## License
 
-- Code: MIT
-- Matcap textures: See [nidorx/matcaps](https://github.com/nidorx/matcaps) for original sources
+Code is MIT licensed.
+
+Matcap textures follow their original source licensing.
