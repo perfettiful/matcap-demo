@@ -1,5 +1,7 @@
 # Matcap Material Demo
 
+Live Demo: [https://perfettiful.github.io/matcap-demo/](https://perfettiful.github.io/matcap-demo/)
+
 An interactive Three.js demo exploring **Matcap (Material Capture)** materials - a technique for rendering beautiful materials without scene lights.
 
 ## What is a Matcap?
